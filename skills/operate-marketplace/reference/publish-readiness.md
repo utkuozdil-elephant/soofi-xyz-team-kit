@@ -70,6 +70,11 @@ Check each item in the product repo at its default branch.
    new ConnectStack(app, "Connect", { stage, stackName: `Connect-${stage}` });
    ```
 
+   If renaming the construct id in the deploy entrypoint would replace live
+   resources, keep the deploy entrypoint unchanged and add a separate
+   `marketplace/app.ts` with the stage-neutral id. Point `cdk.json` or the pack
+   step at it, and have deploy commands name their entrypoint explicitly.
+
 3. **Lambda bundles minified with no source maps.** Set these in the product's
    single Lambda bundling helper, not per function:
 
@@ -94,6 +99,20 @@ Check each item in the product repo at its default branch.
 
    and never `lib/`, `src/`, `lambda/`, `test/`, `node_modules/`,
    `marketplace/app.ts`, `.git/`, or env files. Under 256 MiB, non-ZIP64.
+   The pack step writes `build/build.manifest.json` itself:
+
+   ```json
+   {
+     "artifactKind": "CDK_CLOUD_ASSEMBLY",
+     "deployerContractVersion": "1",
+     "componentId": "connect",
+     "componentName": "Connect",
+     "bundleType": "SERVICE",
+     "stacks": ["Connect"],
+     "packedStage": "dev",
+     "cloudFormationStackNames": ["Connect-dev"]
+   }
+   ```
 6. **A publish step** (`just publish`) that packs, uploads to S3 with metadata
    (section B), and prints a presigned URL (section B2).
 7. **Tests** covering the manifest, stack ids, and zip layout.
@@ -114,6 +133,31 @@ Check each item in the product repo at its default branch.
 Encoding: an unsigned token `<base64url header>.<base64url JSON payload>.`;
 Marketplace reads the middle segment. S3 limits all user metadata on an object
 to 2 KB, so keep both payloads compact (no per-asset hash maps).
+
+Example `service-builder` payload written by the product's publish step:
+
+```json
+{
+  "issuer": "connect/just-publish",
+  "artifact_kind": "CDK_CLOUD_ASSEMBLY",
+  "deployer_contract_version": "1",
+  "component_id": "connect",
+  "source_hash": "sha256:<hash of the source commit tree>",
+  "assembly_hash": "sha256:<hash of cdk.out contents>",
+  "artifact_hash": "sha256:<hash of the zip bytes>",
+  "cloud_assembly": { "stacks": ["Connect"], "packed_stage": "dev" },
+  "deployment_parameters": {},
+  "lambda_asset_policy": { "minified": true, "obfuscated": false, "source_maps": false }
+}
+```
+
+```ts
+const b64url = (s: string) => Buffer.from(s).toString("base64url");
+const token = `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify(payload))}.`;
+```
+
+Build-only checks do not apply to this path: do not switch the package
+manager to pnpm, add `@internal/marketplace-cdk`, or file Build issues.
 
 Who writes it:
 
