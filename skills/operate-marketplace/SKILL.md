@@ -133,7 +133,9 @@ what their product needs to publish.
    the concrete change for each missing item. Cite
    [Spring-Oaks-Capital-LLC/deploy#3](https://github.com/Spring-Oaks-Capital-LLC/deploy/pull/3)
    as the worked example.
-4. Do not edit the product repository and do not fabricate `service-builder`
+4. If the zip is ready but there is no `bundle_url`, give the upload and
+   presign steps from the "Host the bundle" section of that file.
+5. Do not edit the product repository and do not fabricate `service-builder`
    or `service-comply` metadata. Stop after the report.
 
 ## 3. Publish, review, rollback

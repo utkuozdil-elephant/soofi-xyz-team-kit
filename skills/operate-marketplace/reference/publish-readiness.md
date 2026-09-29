@@ -94,6 +94,41 @@ metadata that only Build and Comply issue. Never tell the user to hand-write it.
 If Build or Comply is not deployed in the target account, say so: the repo can
 be made ready, but publishing waits on those services.
 
+## B2. Host the bundle and get the presigned URL
+
+When the user has a packed zip but no `bundle_url`, give these steps. The user
+uploads to an S3 bucket they own and presigns it; Marketplace never issues one.
+
+```bash
+export AWS_PROFILE=<selected-profile> AWS_REGION=<region>
+BUCKET=<product-artifacts-bucket>
+KEY=bundles/<component_id>/<component_id>-cloud-assembly.zip
+
+TARGET_ENV=<stage> just pack
+
+aws s3 cp artifacts/<component_id>-cloud-assembly.zip "s3://$BUCKET/$KEY" \
+  --content-type application/zip \
+  --metadata "service-builder=$BUILDER_TOKEN,service-comply=$COMPLY_TOKEN"
+
+aws s3 presign "s3://$BUCKET/$KEY" --expires-in 7200
+```
+
+- Set metadata at upload time. S3 cannot add metadata to an existing object;
+  re-upload to fix it. S3 serves it back as `x-amz-meta-service-builder` and
+  `x-amz-meta-service-comply`.
+- `$BUILDER_TOKEN` and `$COMPLY_TOKEN` come from the product's pipeline and a
+  scan that actually ran. Never generate them in this skill, and never write a
+  passing Comply verdict that no scan produced.
+- Use an expiry that outlasts the review. Marketplace downloads the zip again
+  at the end, after up to ~7.5 minutes of sandbox polling. SSO or assumed-role
+  sessions cap the URL at the session lifetime.
+- The URL must be a plain Amazon S3 HTTPS object URL. CloudFront URLs and
+  redirects are rejected.
+- Treat the presigned URL as a secret while it is valid. Do not commit it.
+
+Run the upload or presign commands only when the user asks, after they confirm
+AWS credentials are ready and name the bucket, account, and region.
+
 ## C. How to report
 
 Return a table with one row per item in A and B: `ready`, `missing`, or
