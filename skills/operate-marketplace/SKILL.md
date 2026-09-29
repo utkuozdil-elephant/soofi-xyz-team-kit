@@ -68,7 +68,7 @@ Classify the request, then run exactly one primary lane (plus inspect as needed)
 | --- | --- | --- |
 | Settings | First non-skip publish, or review readiness unknown | §1 |
 | Register | New family / category / product / configuration / component | §2 |
-| Readiness | User wants to publish but has no Build-produced `bundle_url` | §3a |
+| Readiness | User wants to publish but has no `bundle_url`, or asks to make a product publishable | §3a |
 | Publish | New Build zip, review poll, rollback | §3 |
 | Inspect | Read-only ontology, bundles, reviews, settings status | §4 |
 
@@ -124,19 +124,23 @@ certification types.
 Run this before §3 when the user has no Build-produced `bundle_url`, or asks
 what their product needs to publish.
 
-1. Ask for the product repository if it is not obvious, and check it out
-   read-only at its default branch.
+1. Ask for the product repository if it is not obvious, and check it out at
+   its default branch.
 2. Walk [publish-readiness.md](reference/publish-readiness.md): repository
-   changes (manifest, CDK stacks, Lambda asset policy, pack step, tests) and
-   pipeline requirements (S3 URL, Build and Comply metadata).
+   requirements (manifest, stage-neutral stacks, Lambda bundling, pack and
+   publish steps, tests) and the S3 metadata Marketplace reads.
 3. Report each item as ready, missing, or cannot verify, with evidence, and
    the concrete change for each missing item. Cite
    [Spring-Oaks-Capital-LLC/deploy#3](https://github.com/Spring-Oaks-Capital-LLC/deploy/pull/3)
    as the worked example.
-4. If the zip is ready but there is no `bundle_url`, give the upload and
-   presign steps from the "Host the bundle" section of that file.
-5. Do not edit the product repository and do not fabricate `service-builder`
-   or `service-comply` metadata. Stop after the report.
+4. When the user asks, make the changes: follow section D of that file on a
+   new branch and open a pull request. Never push to the default branch,
+   merge, deploy, or publish in this lane.
+5. If the zip is ready but there is no `bundle_url`, give the upload and
+   presign steps from section B2 of that file.
+6. Never write a passing `service-comply` verdict without a real scan, never
+   claim `obfuscated: true` without obfuscation, and never name the Build
+   service as issuer of metadata it did not produce.
 
 ## 3. Publish, review, rollback
 
